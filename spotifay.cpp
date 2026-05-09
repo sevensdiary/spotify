@@ -1,367 +1,401 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <climits>  // untuk INT_MAX
 using namespace std;
 
 struct Lagu {
-    string judul, artis, genre;
+    string judul;
+    string artis;
+    string genre;
     int durasi;
     Lagu* next;
-
-    Lagu(string j, string a, string g, int d) {
-        judul = j;
-        artis = a;
-        genre = g;
-        durasi = d;
-        next = nullptr;
-    }
 };
 
 struct Playlist {
-    string nama;       
-    Lagu*  headLagu;
-    Lagu*  tailLagu;    
-    int    jumlahLagu;  
+    string nama;
+    Lagu* head;
     Playlist* next;
-    Playlist* prev;     
-
-    Playlist(string n) {
-        nama       = n;
-        headLagu   = nullptr;
-        tailLagu   = nullptr;
-        jumlahLagu = 0;
-        next       = nullptr;
-        prev       = nullptr;
-    }
 };
 
-Playlist* headPlaylist = nullptr;
-Playlist* tailPlaylist = nullptr;
-int totalPlaylist = 0;
+Playlist* daftarPlaylist = nullptr;
 
-void      menuUtama();
-void      buatPlaylist();
-void      lihatDaftarPlaylist();
-void      tampilkanMenuPlaylist(Playlist* pl);
-Playlist* cariPlaylist(const string& nama);
-void      tambahLagu(Playlist* pl);
-void      tampilkanPlaylist(Playlist* pl);
-void      tampilkanStatistik(Playlist* pl);
-void      hapusLagu(Playlist* pl);
-void      hapusPlaylist(const string& nama);
-void      simpanKeFile();
-void      bacaDariFile();
-void      hapusSemuaPlaylist();
-void      urutkanLagu(Playlist* pl);
-void      tampilkanRecap();
+void menuUtama();
+void buatPlaylist();
+void lihatDaftarPlaylist();
+void tampilkanMenuPlaylist(Playlist*);
+Playlist* cariPlaylist(const string&);
+void tambahLagu(Playlist*);
+void tampilkanPlaylist(Playlist*);
+void tampilkanStatistik(Playlist*);
+void hapusLagu(Playlist*);
+void hapusPlaylist(const string&);
+void simpanKeFile();
+void bacaDariFile();
+void hapusSemuaPlaylist();
+void urutkanLagu(Playlist* pl);
+void tampilkanRecap();
 
-string formatDurasi(int detik) {
-    int menit = detik / 60;
-    int sisa = detik % 60;
-    string hasil = to_string(menit) + ":";
-    if (sisa < 10) hasil += "0";
-    hasil += to_string(sisa);
-    return hasil;
-} 
-
-void cetakGaris() {
-    cout << "============================================================" << endl;
-}
-
-void cetakGarisPendek() {
-    cout << "------------------------------------------------------------" << endl;
+int main() {
+    bacaDariFile();
+    menuUtama();
+    hapusSemuaPlaylist();
+    return 0;
 }
 
 void menuUtama() {
     int pilihan;
-    bacaDariFile();
     do {
-        cout << endl;
-        cetakGaris();
-        cout << " SPOTIFY - Your Music Space " << endl;
-        cetakGaris();
-        cout << "  Total Playlist: " << totalPlaylist << endl;
-        cetakGarisPendek();
-        cout << "  [1] Buat Playlist Baru" << endl;
-        cout << "  [2] Lihat Daftar Playlist" << endl;
-        cout << "  [3] Cari & Buka Playlist" << endl;
-        cout << "  [4] Hapus Playlist" << endl;
-        cout << "  [5] Lihat Rekap Semua Playlist" << endl;
-        cout << "  [6] Simpan ke File" << endl;
-        cout << "  [7] Baca dari File" << endl;
-        cout << "  [0] Keluar" << endl;
-        cetakGaris();
-        cout << "  Pilihan Anda: ";
+        cout << "\n------------------------" << endl;
+        cout << "        Spotipy         " << endl;
+        cout << "------------------------" << endl;
+        cout << "1. Buat Playlist" << endl;
+        cout << "2. Lihat Playlist" << endl;
+        cout << "3. Recap" << endl;
+        cout << "0. Keluar" << endl;
+        cout << "> Pilih Menu : ";
         cin >> pilihan;
-        cin.ignore(); 
+        cin.ignore();
 
         switch (pilihan) {
-            case 1:
-                buatPlaylist();
-                break;
-            case 2:
-                lihatDaftarPlaylist();
-                break;
-            case 3: {
-                string namaCari;
-                cout << "\n  Masukkan nama playlist yang dicari: ";
-                getline(cin, namaCari);
-                Playlist* ditemukan = cariPlaylist(namaCari);
-                if (ditemukan != nullptr) {
-                    tampilkanMenuPlaylist(ditemukan);
-                } else {
-                    cout << "\n  [!] Playlist \"" << namaCari << "\" tidak ditemukan." << endl;
-                }
-                break;
-            }
-            case 4: {
-                string namaHapus;
-                cout << "\n  Masukkan nama playlist yang akan dihapus: ";
-                getline(cin, namaHapus);
-                hapusPlaylist(namaHapus);
-                break;
-            }
-            case 5:
-                tampilkanRecap();
-                break;
-            case 6:
-                simpanKeFile();
-                break;
-            case 7:
-                bacaDariFile();
-                break;
+            case 1: buatPlaylist();        break;
+            case 2: lihatDaftarPlaylist(); break;
+            case 3: tampilkanRecap();      break;
             case 0:
-                cout << "\n  Menyimpan data..." << endl;
                 simpanKeFile();
-                hapusSemuaPlaylist();
-                cout << "  Terima kasih! Sampai jumpa!" << endl;
+                cout << "Data tersimpan. Sampai jumpa!\n";
                 break;
-            default:
-                cout << "\n  [!] Pilihan tidak valid!" << endl;
+            default: cout << "Pilihan tidak valid.\n";
         }
     } while (pilihan != 0);
 }
 
 void buatPlaylist() {
-    cout << endl;
-    cetakGaris();
-    cout << "BUAT PLAYLIST BARU" << endl;
-    cetakGaris();
-
     string nama;
-    cout << "  Masukkan nama playlist: ";
+    cout << "\n--- Buat Playlist ---\n";
+    cout << "Nama playlist: ";
     getline(cin, nama);
 
-    if (cariPlaylist(nama) != nullptr) {
-        cout << "\n  [!] Playlist dengan nama \"" << nama << "\" sudah ada!" << endl;
+    // Cek duplikat nama
+    if (cariPlaylist(nama)) {
+        cout << "Playlist [" << nama << "] sudah ada!\n";
         return;
     }
 
-    Playlist* baru = new Playlist(nama);
+    Playlist* baru  = new Playlist{nama, nullptr, nullptr};
+    baru->next      = daftarPlaylist;
+    daftarPlaylist  = baru;
 
-    if (headPlaylist == nullptr) {
-        headPlaylist = baru;
-        tailPlaylist = baru;
-    } else {
-        baru->prev = tailPlaylist;  
-        tailPlaylist->next = baru;          
-        tailPlaylist = baru;          
-    }
-
-    totalPlaylist++;
-    cout << "\n  [v] Playlist \"" << nama << "\" berhasil dibuat!" << endl;
+    cout << "Playlist [" << nama << "] berhasil dibuat!\n";
+    simpanKeFile();
+    tampilkanMenuPlaylist(baru);
 }
 
 void lihatDaftarPlaylist() {
-    cout << endl;
-    cetakGaris();
-    cout << "DAFTAR PLAYLIST" << endl;
-    cetakGaris();
-
-    if (headPlaylist == nullptr) {
-        cout << "(Belum ada playlist. Buat playlist baru terlebih dahulu!)" << endl;
+    cout << "\n--- Daftar Playlist ---\n";
+    if (!daftarPlaylist) {
+        cout << "Belum ada playlist.\n";
         return;
     }
 
-    Playlist* current = headPlaylist;
-    int nomor = 1;
-
-    while (current != nullptr) {
-        cout << "[" << nomor << "] " << current->nama;
-        cout << "(" << current->jumlahLagu << " lagu)" << endl;
-        current = current->next; 
-        nomor++;
+    Playlist* temp = daftarPlaylist;
+    int i = 1;
+    while (temp) {
+        // Hitung jumlah lagu
+        int jml = 0;
+        Lagu* l = temp->head;
+        while (l) { jml++; l = l->next; }
+        cout << i++ << ". " << temp->nama << " (" << jml << " lagu)\n";
+        temp = temp->next;
     }
 
-    cetakGaris();
-    cout << "  Total: " << totalPlaylist << " playlist" << endl;
+    cout << "\nMasukkan nama playlist (kosong = kembali): ";
+    string nama;
+    getline(cin, nama);
+    if (!nama.empty()) {
+        Playlist* p = cariPlaylist(nama);
+        if (p) tampilkanMenuPlaylist(p);
+        else    cout << "Playlist tidak ditemukan.\n";
+    }
 }
 
 void tampilkanMenuPlaylist(Playlist* pl) {
-    if (pl == nullptr) return;
-
     int pilihan;
     do {
-        cout << endl;
-        cetakGaris();
-        cout << "PLAYLIST: " << pl->nama << endl;
-        cout << "Jumlah Lagu: " << pl->jumlahLagu << endl;
-        cetakGaris();
-        cout << "  [1] Tampilkan Semua Lagu" << endl;
-        cout << "  [2] Tambah Lagu" << endl;
-        cout << "  [3] Hapus Lagu" << endl;
-        cout << "  [4] Urutkan Lagu (A-Z)" << endl;
-        cout << "  [5] Lihat Statistik Playlist" << endl;
-        cout << "  [0] Kembali ke Menu Utama" << endl;
-        cetakGaris();
-        cout << "  Pilihan Anda: ";
+        cout << "\n--- Playlist [" << pl->nama << "] ---\n";
+        cout << "1. Lihat isi playlist\n";
+        cout << "2. Tambah lagu\n";
+        cout << "3. Urutkan lagu (durasi pendek -> panjang)\n";
+        cout << "4. Hapus lagu\n";
+        cout << "5. Statistik playlist\n";
+        cout << "6. Hapus playlist ini\n";
+        cout << "0. Kembali\n";
+        cout << "> Pilih menu: ";
         cin >> pilihan;
         cin.ignore();
 
         switch (pilihan) {
-            case 1: tampilkanPlaylist(pl);    break;
-            case 2: tambahLagu(pl);           break;
-            case 3: hapusLagu(pl);            break;
-            case 4: urutkanLagu(pl);          break;
-            case 5: tampilkanStatistik(pl);   break;
+            case 1: tampilkanPlaylist(pl);   break;
+            case 2: tambahLagu(pl);          break;
+            case 3: urutkanLagu(pl);         break;
+            case 4: hapusLagu(pl);           break;
+            case 5: tampilkanStatistik(pl);  break;
+            case 6:
+                hapusPlaylist(pl->nama);
+                return;  // playlist sudah dihapus, keluar dari fungsi
             case 0: break;
-            default:
-                cout << "\n  [!] Pilihan tidak valid!" << endl;
+            default: cout << "Pilihan tidak valid.\n";
         }
     } while (pilihan != 0);
 }
 
 Playlist* cariPlaylist(const string& nama) {
-    Playlist* current = headPlaylist; 
-    while (current != nullptr) {
-        if (current->nama == nama) {
-            return current; 
-        }
-        current = current->next; 
+    Playlist* temp = daftarPlaylist;
+    while (temp) {
+        if (temp->nama == nama) return temp;
+        temp = temp->next;
     }
-    return nullptr; 
+    return nullptr;
 }
 
 void tambahLagu(Playlist* pl) {
-    if (pl == nullptr) return;
+    string judul, artis, genre, sdurasi;
+    cout << "\n--- Tambah Lagu ---\n";
+    cout << "Judul : "; getline(cin, judul);
+    cout << "Artis : "; getline(cin, artis);
+    cout << "Genre : "; getline(cin, genre);
 
-    cout << endl;
-    cetakGaris();
-    cout << "   TAMBAH LAGU ke \"" << pl->nama << "\"" << endl;
-    cetakGaris();
-
-    string judul, artis, genre;
-    int menit, detik;
-
-    cout << "  Judul lagu  : ";
-    getline(cin, judul);
-    cout << "  Nama artis  : ";
-    getline(cin, artis);
-    cout << "  Genre       : ";
-    getline(cin, genre);
-    cout << "  Durasi (menit): ";
-    cin >> menit;
-    cout << "  Durasi (detik): ";
-    cin >> detik;
-    cin.ignore();
-
-    int totalDetik = (menit * 60) + detik;
-
-    Lagu* lagubaru = new Lagu(judul, artis, genre, totalDetik);
-
-    if (pl->headLagu == nullptr) {
-        pl->headLagu = lagubaru;
-        pl->tailLagu = lagubaru;
-    } else {
-        pl->tailLagu->next = lagubaru; 
-        pl->tailLagu       = lagubaru; 
+    int durasi;
+    while (true) {
+        cout << "Durasi (detik): ";
+        getline(cin, sdurasi);
+        bool valid = !sdurasi.empty();
+        for (char c : sdurasi) if (!isdigit(c)) { valid = false; break; }
+        if (!valid) { cout << "Input harus berupa angka positif!\n"; continue; }
+        durasi = stoi(sdurasi);
+        break;
     }
 
-    pl->jumlahLagu++;
-    cout << "\n  [v] Lagu \"" << judul << "\" berhasil ditambahkan!" << endl;
+    Lagu* baru = new Lagu{judul, artis, genre, durasi, nullptr};
+    if (!pl->head) {
+        pl->head = baru;
+    } else {
+        Lagu* temp = pl->head;
+        while (temp->next) temp = temp->next;
+        temp->next = baru;
+    }
+    cout << "Lagu [" << judul << "] berhasil ditambahkan.\n";
+    simpanKeFile();
 }
- 
+
 void tampilkanPlaylist(Playlist* pl) {
-    if (pl == nullptr) return;
+    cout << "\n--- Isi Playlist [" << pl->nama << "] ---\n";
+    if (!pl->head) { cout << "Playlist kosong.\n"; return; }
 
-    cout << endl;
-    cetakGaris();
-    cout << "   PLAYLIST: " << pl->nama << endl;
-    cetakGarisPendek();
+    Lagu* temp = pl->head;
+    int i = 1;
+    while (temp) {
+        cout << i++ << ". " << temp->judul << " - " << temp->artis
+             << " [" << temp->genre << "] (" << temp->durasi << " detik)\n";
+        temp = temp->next;
+    }
+}
 
-    if (pl->headLagu == nullptr) {
-        cout << "  (Playlist masih kosong!)" << endl;
+void urutkanLagu(Playlist* pl) {
+    if (!pl->head || !pl->head->next) {
+        cout << "Lagu kurang dari 2, tidak perlu diurutkan.\n";
         return;
     }
 
-    Lagu* current = pl->headLagu;
-    int nomor = 1;
+    bool swapped;
+    do {
+        swapped = false;
+        Lagu* curr = pl->head;
+        Lagu* prev = nullptr;
+        Lagu* next = nullptr;
 
-    cout << "  No  Judul                  Artis              Genre       Durasi" << endl;
-    cetakGarisPendek();
+        while (curr->next) {
+            next = curr->next;
+            if (curr->durasi > next->durasi) {
+                if (prev) prev->next = next;
+                else       pl->head  = next;
+                curr->next = next->next;
+                next->next = curr;
+                swapped = true;
+                prev    = next;
+            } else {
+                prev = curr;
+                curr = curr->next;
+            }
+        }
+    } while (swapped);
 
-    while (current != nullptr) {
-        cout << "  " << nomor << ".  ";
-        cout << current->judul.substr(0, 20);
-        // Padding agar rata
-        for (int i = current->judul.length(); i < 22; i++) cout << " ";
-        cout << current->artis.substr(0, 18);
-        for (int i = current->artis.length(); i < 18; i++) cout << " ";
-        cout << "  " << current->genre.substr(0, 10);
-        for (int i = current->genre.length(); i < 10; i++) cout << " ";
-        cout << "  " << formatDurasi(current->durasi) << endl;
+    cout << "Berhasil diurutkan (pendek -> panjang).\n";
+    tampilkanPlaylist(pl);
+    simpanKeFile();
+}
 
-        current = current->next;
-        nomor++;
+void hapusLagu(Playlist* pl) {
+    tampilkanPlaylist(pl);
+    if (!pl->head) return;
+
+    cout << "Judul lagu yang ingin dihapus: ";
+    string judul;
+    getline(cin, judul);
+
+    Lagu* temp = pl->head;
+    Lagu* prev = nullptr;
+    while (temp && temp->judul != judul) { prev = temp; temp = temp->next; }
+
+    if (!temp) { cout << "Lagu tidak ditemukan.\n"; return; }
+    if (!prev) pl->head    = temp->next;
+    else       prev->next  = temp->next;
+    delete temp;
+    cout << "Lagu [" << judul << "] berhasil dihapus.\n";
+    simpanKeFile();
+}
+
+void hapusPlaylist(const string& nama) {
+    Playlist* temp = daftarPlaylist;
+    Playlist* prev = nullptr;
+    while (temp && temp->nama != nama) { prev = temp; temp = temp->next; }
+    if (!temp) { cout << "Playlist tidak ditemukan.\n"; return; }
+
+    // Hapus semua lagu di playlist ini
+    while (temp->head) {
+        Lagu* hapus = temp->head;
+        temp->head  = temp->head->next;
+        delete hapus;
     }
-
-    cetakGaris();
-    cout << "  Total: " << pl->jumlahLagu << " lagu" << endl;
+    if (!prev) daftarPlaylist = temp->next;
+    else       prev->next     = temp->next;
+    delete temp;
+    cout << "Playlist [" << nama << "] berhasil dihapus.\n";
+    simpanKeFile();
 }
 
 void tampilkanStatistik(Playlist* pl) {
-    if (pl == nullptr) return;
+    cout << "\n--- Statistik [" << pl->nama << "] ---\n";
+    if (!pl->head) { cout << "Playlist kosong.\n"; return; }
 
-    cout << endl;
-    cetakGaris();
-    cout << "   STATISTIK PLAYLIST: " << pl->nama << endl;
-    cetakGaris();
+    int total = 0, totalDurasi = 0;
+    int terpendek = INT_MAX, terpanjang = 0;
+    string judulPendek, judulPanjang;
+    Lagu* temp = pl->head;
 
-    if (pl->headLagu == nullptr) {
-        cout << "  (Playlist masih kosong!)" << endl;
-        return;
+    while (temp) {
+        total++;
+        totalDurasi += temp->durasi;
+        if (temp->durasi < terpendek) { terpendek = temp->durasi; judulPendek = temp->judul; }
+        if (temp->durasi > terpanjang) { terpanjang = temp->durasi; judulPanjang = temp->judul; }
+        temp = temp->next;
     }
 
-    int    totalDetik   = 0;
-    int    maxDurasi    = 0;
-    int    minDurasi    = pl->headLagu->durasi;
-    string laguterpanjang = "";
-    string laguterpendek  = "";
-
-    Lagu* current = pl->headLagu;
-    while (current != nullptr) {
-        totalDetik += current->durasi;
-
-        if (current->durasi > maxDurasi) {
-            maxDurasi       = current->durasi;
-            laguterpanjang  = current->judul;
-        }
-        if (current->durasi < minDurasi) {
-            minDurasi      = current->durasi;
-            laguterpendek  = current->judul;
-        }
-
-        current = current->next;
-    }
-
-    int rataRata = totalDetik / pl->jumlahLagu;
-
-    cout << "  Nama Playlist    : " << pl->nama << endl;
-    cout << "  Jumlah Lagu      : " << pl->jumlahLagu << " lagu" << endl;
-    cout << "  Total Durasi     : " << formatDurasi(totalDetik) << endl;
-    cout << "  Rata-rata Durasi : " << formatDurasi(rataRata) << endl;
-    cout << "  Lagu Terpanjang  : " << laguterpanjang << " (" << formatDurasi(maxDurasi) << ")" << endl;
-    cout << "  Lagu Terpendek   : " << laguterpendek  << " (" << formatDurasi(minDurasi) << ")" << endl;
-    cetakGaris();
+    cout << "Jumlah lagu      : " << total << "\n";
+    cout << "Total durasi     : " << totalDurasi << " detik\n";
+    cout << "Rata-rata durasi : " << totalDurasi / total << " detik\n";
+    cout << "Lagu terpendek   : " << judulPendek << " (" << terpendek << " detik)\n";
+    cout << "Lagu terpanjang  : " << judulPanjang << " (" << terpanjang << " detik)\n";
 }
- 
+
+void simpanKeFile() {
+    ofstream file("playlist.txt");
+    Playlist* p = daftarPlaylist;
+    while (p) {
+        file << "#PLAYLIST;" << p->nama << "\n";
+        Lagu* l = p->head;
+        while (l) {
+            file << l->judul << ";" << l->artis << ";" << l->genre << ";" << l->durasi << "\n";
+            l = l->next;
+        }
+        file << "#END\n";
+        p = p->next;
+    }
+    file.close();
+}
+
+void bacaDariFile() {
+    ifstream file("playlist.txt");
+    if (!file.is_open()) return;
+    hapusSemuaPlaylist();
+
+    string line;
+    Playlist* current = nullptr;
+    while (getline(file, line)) {
+        if (line.find("#PLAYLIST;") == 0) {
+            string nama = line.substr(10);
+            current = new Playlist{nama, nullptr, daftarPlaylist};
+            daftarPlaylist = current;
+        } else if (line == "#END") {
+            current = nullptr;
+        } else if (current && !line.empty()) {
+            size_t p1 = line.find(';');
+            size_t p2 = line.find(';', p1 + 1);
+            size_t p3 = line.find(';', p2 + 1);
+            if (p1 == string::npos || p2 == string::npos || p3 == string::npos) continue;
+
+            string judul = line.substr(0, p1);
+            string artis = line.substr(p1 + 1, p2 - p1 - 1);
+            string genre = line.substr(p2 + 1, p3 - p2 - 1);
+            int durasi   = stoi(line.substr(p3 + 1));
+
+            Lagu* baru = new Lagu{judul, artis, genre, durasi, nullptr};
+            if (!current->head) {
+                current->head = baru;
+            } else {
+                Lagu* temp = current->head;
+                while (temp->next) temp = temp->next;
+                temp->next = baru;
+            }
+        }
+    }
+    file.close();
+}
+
+void hapusSemuaPlaylist() {
+    while (daftarPlaylist) {
+        Playlist* p = daftarPlaylist;
+        daftarPlaylist = daftarPlaylist->next;
+        while (p->head) {
+            Lagu* l = p->head;
+            p->head = p->head->next;
+            delete l;
+        }
+        delete p;
+    }
+}
+
+void tampilkanRecap() {
+    cout << "\n========== Recap ==========\n";
+    if (!daftarPlaylist) { cout << "Belum ada playlist.\n"; return; }
+
+    int totalPlaylist = 0, totalLagu = 0, durasiTotal = 0;
+    int durasiTerpendek = INT_MAX, durasiTerpanjang = 0;
+    string laguTerpendek, laguTerpanjang, playlistTerbanyak;
+    int maxLagu = 0;
+
+    Playlist* p = daftarPlaylist;
+    while (p) {
+        totalPlaylist++;
+        int jumlahLagu = 0;
+        Lagu* l = p->head;
+        while (l) {
+            jumlahLagu++; totalLagu++; durasiTotal += l->durasi;
+            if (l->durasi < durasiTerpendek) { durasiTerpendek = l->durasi; laguTerpendek = l->judul + " - " + l->artis; }
+            if (l->durasi > durasiTerpanjang) { durasiTerpanjang = l->durasi; laguTerpanjang = l->judul + " - " + l->artis; }
+            l = l->next;
+        }
+        if (jumlahLagu > maxLagu) { maxLagu = jumlahLagu; playlistTerbanyak = p->nama; }
+        p = p->next;
+    }
+
+    cout << "Jumlah Playlist       : " << totalPlaylist << "\n";
+    cout << "Jumlah Lagu Total     : " << totalLagu << "\n";
+    if (totalLagu > 0) {
+        cout << "Rata-rata Durasi      : " << durasiTotal / totalLagu << " detik\n";
+        cout << "Lagu Terpendek        : " << laguTerpendek << " (" << durasiTerpendek << " detik)\n";
+        cout << "Lagu Terpanjang       : " << laguTerpanjang << " (" << durasiTerpanjang << " detik)\n";
+        cout << "Playlist Terbanyak    : " << playlistTerbanyak << " (" << maxLagu << " lagu)\n";
+    }
+    cout << "===========================\n";
+}
