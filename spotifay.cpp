@@ -4,21 +4,24 @@
 #include <climits>  // untuk INT_MAX
 using namespace std;
 
+// daftar playlist nyimpen kumpulan playlist, nah playlist itu kumpulan lagu-lagu
+// lagu nyimpen data 1 lagu dan pointer ke lagu berikutnya
+// playlist nyimpen nama playlist, daftar lagu dan sambungin ke playlist lainnya
 struct Lagu {
     string judul;
     string artis;
     string genre;
     int durasi;
-    Lagu* next;
+    Lagu* next; //pointer buat nyambungin ke lagu berikutnya
 };
 
 struct Playlist {
-    string nama;
-    Lagu* head;
-    Playlist* next;
+    string nama; //nyimpen nama playlist
+    Lagu* head; //pointer ke lagu pertama dlm playlist itu
+    Playlist* next; //pointer buat nyambungin ke playlist berikutnya
 };
 
-Playlist* daftarPlaylist = nullptr;
+Playlist* daftarPlaylist = nullptr; // daftarPlaylist itu pointer bertipe Playlist. dia bs nunjuk ke objectnya Playlist
 
 void menuUtama();
 void buatPlaylist();
@@ -30,6 +33,7 @@ void tampilkanPlaylist(Playlist*);
 void tampilkanStatistik(Playlist*);
 void hapusLagu(Playlist*);
 void hapusPlaylist(const string&);
+void renamePlaylist(Playlist*);
 void simpanKeFile();
 void bacaDariFile();
 void hapusSemuaPlaylist();
@@ -47,14 +51,18 @@ void menuUtama() {
     int pilihan;
     do {
         cout << "\n------------------------" << endl;
-        cout << "        Spotipy         " << endl;
+        cout << "         Spotifay         " << endl;
         cout << "------------------------" << endl;
         cout << "1. Buat Playlist" << endl;
         cout << "2. Lihat Playlist" << endl;
         cout << "3. Recap" << endl;
         cout << "0. Keluar" << endl;
         cout << "> Pilih Menu : ";
-        cin >> pilihan;
+        while (!(cin >> pilihan)) {
+            cin.clear();
+            cin.ignore(1000, '\n');
+            cout << "Input harus angka!\n";
+        }
         cin.ignore();
 
         switch (pilihan) {
@@ -73,8 +81,20 @@ void menuUtama() {
 void buatPlaylist() {
     string nama;
     cout << "\n--- Buat Playlist ---\n";
-    cout << "Nama playlist: ";
-    getline(cin, nama);
+    cout << "Nama playlist: ";getline(cin, nama);
+
+    //validasi nama playlist kodong
+    if(nama.empty()){
+        //hitung jumlah playlistnya
+        int count = 1;
+        Playlist* temp = daftarPlaylist;
+        while(temp){
+            count++;
+            temp = temp->next;
+        }
+        nama = "Playlist ke-" + to_string(count);
+        cout << "Nama otomatis: [ " << nama << " ]" << endl;
+    }
 
     // Cek duplikat nama
     if (cariPlaylist(nama)) {
@@ -82,7 +102,7 @@ void buatPlaylist() {
         return;
     }
 
-    Playlist* baru  = new Playlist{nama, nullptr, nullptr};
+    Playlist* baru  = new Playlist{nama, nullptr, nullptr}; //membuat variabel pointer bernama baru dgn tipe struct playlist
     baru->next      = daftarPlaylist;
     daftarPlaylist  = baru;
 
@@ -128,7 +148,8 @@ void tampilkanMenuPlaylist(Playlist* pl) {
         cout << "3. Urutkan lagu (durasi pendek -> panjang)\n";
         cout << "4. Hapus lagu\n";
         cout << "5. Statistik playlist\n";
-        cout << "6. Hapus playlist ini\n";
+        cout << "6. Rename Playlist\n";
+        cout << "7. Hapus playlist ini\n";
         cout << "0. Kembali\n";
         cout << "> Pilih menu: ";
         cin >> pilihan;
@@ -140,9 +161,18 @@ void tampilkanMenuPlaylist(Playlist* pl) {
             case 3: urutkanLagu(pl);         break;
             case 4: hapusLagu(pl);           break;
             case 5: tampilkanStatistik(pl);  break;
-            case 6:
+            case 6: renamePlaylist(pl);      break;
+            case 7:{
+                char konfirmasi;
+                cout << "Yakin hapus playlist[" << pl->nama << "] (y/n): ";cin>>konfirmasi;cin.ignore();
+                if(konfirmasi!='y' && konfirmasi!='Y'){
+                    cout << "Dibatalkan.\n" << endl;
+                    break;
+                }
+
                 hapusPlaylist(pl->nama);
                 return;  // playlist sudah dihapus, keluar dari fungsi
+            }
             case 0: break;
             default: cout << "Pilihan tidak valid.\n";
         }
@@ -201,6 +231,19 @@ void tampilkanPlaylist(Playlist* pl) {
     }
 }
 
+void renamePlaylist(Playlist* pl) {
+    string namaBaru;
+    cout << "Nama baru (kosong = batal): ";
+    getline(cin, namaBaru);
+
+    if (namaBaru.empty()) { cout << "Dibatalkan.\n"; return; }
+    if (cariPlaylist(namaBaru)) { cout << "Nama [" << namaBaru << "] sudah ada!\n"; return; }
+
+    pl->nama = namaBaru;
+    cout << "Playlist berhasil direname jadi [" << namaBaru << "].\n";
+    simpanKeFile();
+}
+
 void urutkanLagu(Playlist* pl) {
     if (!pl->head || !pl->head->next) {
         cout << "Lagu kurang dari 2, tidak perlu diurutkan.\n";
@@ -245,9 +288,20 @@ void hapusLagu(Playlist* pl) {
 
     Lagu* temp = pl->head;
     Lagu* prev = nullptr;
-    while (temp && temp->judul != judul) { prev = temp; temp = temp->next; }
+    while (temp && temp->judul != judul) { 
+        prev = temp; 
+        temp = temp->next; 
+    }
 
     if (!temp) { cout << "Lagu tidak ditemukan.\n"; return; }
+    char konfirmasi;
+    cout << "Yakin hapus [" << judul << "]? (y/n): ";cin>>konfirmasi;
+    cin.ignore();
+    if(konfirmasi!= 'y' && konfirmasi != 'Y') {
+        cout << "Dibatalkan!\n"; 
+        return;
+    } 
+    
     if (!prev) pl->head    = temp->next;
     else       prev->next  = temp->next;
     delete temp;
@@ -315,15 +369,15 @@ void simpanKeFile() {
 }
 
 void bacaDariFile() {
-    ifstream file("playlist.txt");
-    if (!file.is_open()) return;
-    hapusSemuaPlaylist();
+    ifstream file("playlist.txt"); //ifstream = input file stream atau membuka file playlist.txt
+    if (!file.is_open()) return; //kalau file gagal dibuka, langsung keluar dari fungsi
+    hapusSemuaPlaylist(); // hapus semua playlist lama di memori dulu, biar ga numpuk2 kl method ini dipanggil trs
 
     string line;
-    Playlist* current = nullptr;
-    while (getline(file, line)) {
+    Playlist* current = nullptr; //playlist yg sedang dibaca skrg
+    while (getline(file, line)) {  // selama masih ada baris di file, ambil 1 baris masuk ke line
         if (line.find("#PLAYLIST;") == 0) {
-            string nama = line.substr(10);
+            string nama = line.substr(10); //nama playlist mulai dr index ke 10
             current = new Playlist{nama, nullptr, daftarPlaylist};
             daftarPlaylist = current;
         } else if (line == "#END") {
